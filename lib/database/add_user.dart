@@ -44,6 +44,8 @@ class _AddUserState extends State<AddUser> {
   bool _isObscured = true;
   bool _isObscuredConfirm = true;
 
+  bool isLoading = false;
+
   int age = 0;
 
   //endregion
@@ -162,6 +164,9 @@ class _AddUserState extends State<AddUser> {
     _controllers['MotherTongue'] = TextEditingController();
     _controllers['Password'] = TextEditingController();
     _controllers['ConfirmPassword'] = TextEditingController();
+    setState(() {
+      HOBBIES.updateAll((key, value) => false);
+    });
 
     if (widget.userData != null) {
       isEditing = true;
@@ -210,8 +215,11 @@ class _AddUserState extends State<AddUser> {
       else{
         _selectedGender = gender;
       }
+      List<dynamic> userHobbies=[];
+      if(widget.userData?[UserDatabase.HOBBIES] !=null){
+        userHobbies = widget.userData?[UserDatabase.HOBBIES].split(',').map((h) => h.trim()).toList();
+      }
 
-      List<dynamic> userHobbies = widget.userData?[UserDatabase.HOBBIES].split(',').map((h) => h.trim()).toList();
       _controllers['Bio']?.text = widget.userData?[UserDatabase.BIO];
       _controllers['MotherTongue']?.text = widget.userData?[UserDatabase.MOTHER_TONGUE];
       for (var hobby in HOBBIES.keys) {
@@ -257,492 +265,505 @@ class _AddUserState extends State<AddUser> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.pink,
-          title: const Text(
-            "ADD USER",
-            style: TextStyle(color: Colors.white),
-          ),
-          centerTitle: true,
-          iconTheme: IconThemeData(color: Colors.white),
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _key,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isEditing ? 'Edit User Information' : 'Enter User Details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: pink400,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            GestureDetector(
-                              onTap: () => showImagePicker(context),
-                              child: CircleAvatar(
-                                radius: 60,
-                                backgroundColor: Colors.grey[300],
-                                backgroundImage: imagePath != null
-                                    ? FileImage(File(imagePath!))
-                                    : AssetImage("assets/images/default_profile.png") as ImageProvider,
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 5,
-                              right: 5,
-                              child: InkWell(
-                                onTap: () => showImagePicker(context),
-                                child: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.pink,
-                                  child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _controllers['Name'],
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: lightBg,
-                    labelText: 'Name',
-                    labelStyle: TextStyle(color: pink400),
-                    prefixIcon: Icon(Icons.person, color: pink400),
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    RegExp nameRegExp = RegExp(r"^[a-zA-Z\s']{3,50}$");
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a name';
-                    } else if (!nameRegExp.hasMatch(value)) {
-                      return 'Enter a valid full name (3-50 characters, alphabets only)';
-                    }
-                    return null;
-                  },
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s']")),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _controllers['Email'],
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    filled: true,
-                    fillColor: lightBg,
-                    labelStyle: TextStyle(color: pink400),
-                    prefixIcon: Icon(Icons.email, color: pink400),
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    RegExp emailRegExp = RegExp(
-                        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter an email address';
-                    } else if (!emailRegExp.hasMatch(value)) {
-                      return 'Enter a valid email address';
-                    } else if (!isEditing && isEmailExist(value)) {
-                      return 'This email is already registered';
-                    }
-                    return null;
-                  },
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.done,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _controllers['Phone'],
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone',
-                    filled: true,
-                    fillColor: lightBg,
-                    labelStyle: TextStyle(color: pink400),
-                    prefixIcon: Icon(Icons.phone, color: pink400),
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
-                  textInputAction: TextInputAction.done,
-                  validator: (value) {
-                    RegExp phoneRegExp = RegExp(r"^[0-9]{10}$");
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a phone number';
-                    }
-                    int? phoneNumber = int.tryParse(value);
-                    if (!phoneRegExp.hasMatch(value)) {
-                      return 'Enter a valid 10-digit mobile number';
-                    } else if (!isEditing && isPhoneExist(phoneNumber!)) {
-                      return 'This phone number is already registered';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedCity,
-                  items: CITIES.map((city) {
-                    return DropdownMenuItem(
-                      value: city,
-                      child: Text(city),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCity = value;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'City',
-                    filled: true,
-                    fillColor: lightBg,
-                    labelStyle: TextStyle(color: pink400),
-                    contentPadding: const EdgeInsets.all(16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please select a city';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: pink400,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () async {
-                          DateTime today = DateTime.now();
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: dob ?? DateTime(today.year - 18, today.month, today.day),
-                            firstDate: DateTime(1900),
-                            lastDate: DateTime.now(),
-                            builder: (context, child) {
-                              return Theme(
-                                data: Theme.of(context),
-                                child: Builder(
-                                  builder: (context) {
-                                    return MediaQuery(
-                                      data: MediaQuery.of(context)
-                                          .copyWith(alwaysUse24HourFormat: false),
-                                      child: child!,
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                          );
-                          if (pickedDate != null) {
-                            setState(() {
-                              selectedDate = pickedDate;
-                            });
-                            _validateDateOfBirth();
-                          }
-                        },
-                        child: Text(
-                          "Date of Birth",
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        selectedDate == null
-                            ? "No Date Selected"
-                            : DateFormat('dd/MM/yyyy').format(selectedDate!),
-                        style: const TextStyle(fontSize: 16, color: Colors.black),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_dobError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      _dobError!,
-                      style: const TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12.0),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Column(
+    return Stack(
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            FocusScope.of(context).unfocus();
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.pink,
+              title: const Text(
+                "ADD USER",
+                style: TextStyle(color: Colors.white),
+              ),
+              centerTitle: true,
+              iconTheme: IconThemeData(color: Colors.white),
+            ),
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _key,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(right: 10.0, top: 8.0),
-                      child: Text(
-                        'Select Gender',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      isEditing ? 'Edit User Information' : 'Enter User Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: pink400,
                       ),
                     ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Stack(
                         children: [
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Male',
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value;
-                                  });
-                                  _validateGender();
-                                },
-                              ),
-                              const Text(
-                                'Male',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 20),
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Female',
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value;
-                                  });
-                                  _validateGender();
-                                },
-                              ),
-                              const Text(
-                                'Female',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 20),
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Other',
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value;
-                                  });
-                                  _validateGender();
-                                },
-                              ),
-                              const Text(
-                                'Other',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            ],
+                          Center(
+                            child: Stack(
+                              alignment: Alignment.bottomRight,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => showImagePicker(context),
+                                  child: CircleAvatar(
+                                    radius: 60,
+                                    backgroundColor: Colors.grey[300],
+                                    backgroundImage: (imagePath != null && File(imagePath!).existsSync())
+                                        ? FileImage(File(imagePath!))
+                                        : AssetImage("assets/images/default_profile.png") as ImageProvider,
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 5,
+                                  right: 5,
+                                  child: InkWell(
+                                    onTap: () => showImagePicker(context),
+                                    child: CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: Colors.pink,
+                                      child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    if (_genderError != null)
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _controllers['Name'],
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: lightBg,
+                        labelText: 'Name',
+                        labelStyle: TextStyle(color: pink400),
+                        prefixIcon: Icon(Icons.person, color: pink400),
+                        contentPadding: const EdgeInsets.all(16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        RegExp nameRegExp = RegExp(r"^[a-zA-Z\s']{3,50}$");
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a name';
+                        } else if (!nameRegExp.hasMatch(value)) {
+                          return 'Enter a valid full name (3-50 characters, alphabets only)';
+                        }
+                        return null;
+                      },
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s']")),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _controllers['Email'],
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        filled: true,
+                        fillColor: lightBg,
+                        labelStyle: TextStyle(color: pink400),
+                        prefixIcon: Icon(Icons.email, color: pink400),
+                        contentPadding: const EdgeInsets.all(16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        RegExp emailRegExp = RegExp(
+                            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter an email address';
+                        } else if (!emailRegExp.hasMatch(value)) {
+                          return 'Enter a valid email address';
+                        } else if (!isEditing && isEmailExist(value)) {
+                          return 'This email is already registered';
+                        }
+                        return null;
+                      },
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.done,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _controllers['Phone'],
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Phone',
+                        filled: true,
+                        fillColor: lightBg,
+                        labelStyle: TextStyle(color: pink400),
+                        prefixIcon: Icon(Icons.phone, color: pink400),
+                        contentPadding: const EdgeInsets.all(16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+                      textInputAction: TextInputAction.done,
+                      validator: (value) {
+                        RegExp phoneRegExp = RegExp(r"^[0-9]{10}$");
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a phone number';
+                        }
+                        int? phoneNumber = int.tryParse(value);
+                        if (!phoneRegExp.hasMatch(value)) {
+                          return 'Enter a valid 10-digit mobile number';
+                        } else if (!isEditing && isPhoneExist(phoneNumber!)) {
+                          return 'This phone number is already registered';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedCity,
+                      items: CITIES.map((city) {
+                        return DropdownMenuItem(
+                          value: city,
+                          child: Text(city),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedCity = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'City',
+                        filled: true,
+                        fillColor: lightBg,
+                        labelStyle: TextStyle(color: pink400),
+                        contentPadding: const EdgeInsets.all(16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select a city';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: pink400,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () async {
+                              DateTime today = DateTime.now();
+                              final pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: dob ?? DateTime(today.year - 18, today.month, today.day),
+                                firstDate: DateTime(1900),
+                                lastDate: DateTime.now(),
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: Theme.of(context),
+                                    child: Builder(
+                                      builder: (context) {
+                                        return MediaQuery(
+                                          data: MediaQuery.of(context)
+                                              .copyWith(alwaysUse24HourFormat: false),
+                                          child: child!,
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              );
+                              if (pickedDate != null) {
+                                setState(() {
+                                  selectedDate = pickedDate;
+                                });
+                                _validateDateOfBirth();
+                              }
+                            },
+                            child: Text(
+                              "Date of Birth",
+                              style: TextStyle(color: Colors.white, fontSize: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            selectedDate == null
+                                ? "No Date Selected"
+                                : DateFormat('dd/MM/yyyy').format(selectedDate!),
+                            style: const TextStyle(fontSize: 16, color: Colors.black),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_dobError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
-                          _genderError!,
+                          _dobError!,
                           style: const TextStyle(
                               color: Colors.blue,
                               fontWeight: FontWeight.bold,
                               fontSize: 12.0),
                         ),
                       ),
+                    const SizedBox(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(right: 10.0, top: 8.0),
+                          child: Text(
+                            'Select Gender',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Male',
+                                    groupValue: _selectedGender,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedGender = value;
+                                      });
+                                      _validateGender();
+                                    },
+                                  ),
+                                  const Text(
+                                    'Male',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 20),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Female',
+                                    groupValue: _selectedGender,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedGender = value;
+                                      });
+                                      _validateGender();
+                                    },
+                                  ),
+                                  const Text(
+                                    'Female',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 20),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Other',
+                                    groupValue: _selectedGender,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedGender = value;
+                                      });
+                                      _validateGender();
+                                    },
+                                  ),
+                                  const Text(
+                                    'Other',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_genderError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              _genderError!,
+                              style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.0),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHobbiesSelection(),
+                    const SizedBox(
+                      height: 16,
+                    ),
+
+                    TextFormField(
+                      controller: _controllers['MotherTongue'],
+                      decoration: InputDecoration(
+                        labelText: 'Mother Tongue',
+                        filled: true,
+                        fillColor: lightBg,
+                        labelStyle: TextStyle(color: pink400),
+                        prefixIcon: Icon(Icons.language, color: pink400),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) => value == null || value.isEmpty ? 'Please enter your mother tongue' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField('Religion', RELIGIONS, selectedReligion,
+                            (value) { setState(() => selectedReligion = value); }),
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField('Marital Status', MARITALSTATUS, selectedMaritalStatus,
+                            (value) { setState(() => selectedMaritalStatus = value); }),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _controllers['Bio'],
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Bio',
+                        alignLabelWithHint: true,
+                        filled: true,
+                        fillColor: lightBg,
+                        labelStyle: TextStyle(color: pink400),
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.only(bottom: 48),
+                          child: Icon(Icons.info, color: pink400),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField('Looking For', LOOKINGFOR, selectedLookingFor,
+                            (value) { setState(() => selectedLookingFor = value); }),
+
+                    const SizedBox(height: 20),
+                    if (!isEditing) ...[
+                      TextFormField(
+                        controller: _controllers['Password'],
+                        obscureText: _isObscured,
+                        obscuringCharacter: '•',
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          filled: true,
+                          fillColor: lightBg,
+                          prefixIcon:
+                              Icon(Icons.lock_outline, color: pink400),
+                          labelStyle: TextStyle(color: pink400),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isObscured ? Icons.visibility_off : Icons.visibility,
+                              color: pink400,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isObscured = !_isObscured;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password cannot be empty.';
+                          }
+                          String pattern = r'^(?!.*\s).{8,}$';
+                          RegExp regex = RegExp(pattern);
+                          if (!regex.hasMatch(value)) {
+                            return 'Password must be at least 8 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _controllers['ConfirmPassword'],
+                        obscureText: _isObscuredConfirm,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          filled: true,
+                          fillColor: lightBg,
+                          prefixIcon:
+                              Icon(Icons.lock_clock, color: pink400),
+                          labelStyle: TextStyle(color: pink400),
+                          contentPadding: const EdgeInsets.all(16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isObscuredConfirm ? Icons.visibility_off : Icons.visibility,
+                              color: pink400,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isObscuredConfirm = !_isObscuredConfirm;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm your password';
+                          }
+                          if (value != _controllers['Password']?.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    _buildSubmitButton(),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _buildHobbiesSelection(),
-                const SizedBox(
-                  height: 16,
-                ),
-
-                TextFormField(
-                  controller: _controllers['MotherTongue'],
-                  decoration: InputDecoration(
-                    labelText: 'Mother Tongue',
-                    filled: true,
-                    fillColor: lightBg,
-                    labelStyle: TextStyle(color: pink400),
-                    prefixIcon: Icon(Icons.language, color: pink400),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) => value == null || value.isEmpty ? 'Please enter your mother tongue' : null,
-                ),
-                const SizedBox(height: 16),
-
-                _buildDropdownField('Religion', RELIGIONS, selectedReligion,
-                        (value) { setState(() => selectedReligion = value); }),
-                const SizedBox(height: 16),
-
-                _buildDropdownField('Marital Status', MARITALSTATUS, selectedMaritalStatus,
-                        (value) { setState(() => selectedMaritalStatus = value); }),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _controllers['Bio'],
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Bio',
-                    alignLabelWithHint: true,
-                    filled: true,
-                    fillColor: lightBg,
-                    labelStyle: TextStyle(color: pink400),
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(bottom: 48),
-                      child: Icon(Icons.info, color: pink400),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                _buildDropdownField('Looking For', LOOKINGFOR, selectedLookingFor,
-                        (value) { setState(() => selectedLookingFor = value); }),
-
-                const SizedBox(height: 20),
-                if (!isEditing) ...[
-                  TextFormField(
-                    controller: _controllers['Password'],
-                    obscureText: _isObscured,
-                    obscuringCharacter: '•',
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      filled: true,
-                      fillColor: lightBg,
-                      prefixIcon:
-                          Icon(Icons.lock_outline, color: pink400),
-                      labelStyle: TextStyle(color: pink400),
-                      contentPadding: const EdgeInsets.all(16),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isObscured ? Icons.visibility_off : Icons.visibility,
-                          color: pink400,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isObscured = !_isObscured;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password cannot be empty.';
-                      }
-                      String pattern = r'^(?!.*\s).{8,}$';
-                      RegExp regex = RegExp(pattern);
-                      if (!regex.hasMatch(value)) {
-                        return 'Password must be at least 8 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _controllers['ConfirmPassword'],
-                    obscureText: _isObscuredConfirm,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      filled: true,
-                      fillColor: lightBg,
-                      prefixIcon:
-                          Icon(Icons.lock_clock, color: pink400),
-                      labelStyle: TextStyle(color: pink400),
-                      contentPadding: const EdgeInsets.all(16),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isObscuredConfirm ? Icons.visibility_off : Icons.visibility,
-                          color: pink400,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isObscuredConfirm = !_isObscuredConfirm;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _controllers['Password']?.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(
-                  height: 20,
-                ),
-                _buildSubmitButton(),
-              ],
+              ),
             ),
           ),
         ),
-      ),
+        if (isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.pink.shade900),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -886,10 +907,16 @@ class _AddUserState extends State<AddUser> {
             //   );
             // }
             if (isEditing) {
+              setState(() {
+                isLoading = true;
+              });
               bool success = await _user.updateUser(
                   userData: userData,
                   index: userData[UserDatabase.USER_ID].toString()
               );
+              setState(() {
+                isLoading = false;
+              });
 
               if (success) {
                 if (widget.onUpdate != null) {
@@ -917,7 +944,13 @@ class _AddUserState extends State<AddUser> {
             }
 
             else {
+              setState(() {
+                isLoading = true;
+              });
               bool success = await _user.addUser(user: userData);
+              setState(() {
+                isLoading = false;
+              });
 
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
