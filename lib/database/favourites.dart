@@ -46,39 +46,51 @@ class _FavouritesState extends State<Favourites> {
 
     await _users.updateUserFavourite(userId, newValue);
 
-    setState(() {
-      favoriteUsers.removeAt(index);
-    });
+    // setState(() {
+    //   favoriteUsers.removeAt(index);
+    // });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: mistyRose,
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: isLoading
-            ? Center(child: CircularProgressIndicator())
-            : favoriteUsers.isEmpty
-            ? Center(
-          child: Text(
-            "No Favorites Yet!",
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+      body: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16.0),
+            child: favoriteUsers.isEmpty && !isLoading
+                ? Center(
+              child: Text(
+                "No Favorites Yet!",
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            )
+                : ListView.builder(
+              itemCount: favoriteUsers.length,
+              itemBuilder: (context, index) {
+                return FavoriteCard(
+                  fetchFavoriteUsers,
+                  favoriteUsers,
+                  favoriteUsers[index],
+                  index,
+                  onRemoveFavorite,
+                  isLoading,
+                  onFavoriteToggle: updateFavoriteStatus,
+                );
+              },
+            ),
           ),
-        )
-            : ListView.builder(
-          itemCount: favoriteUsers.length,
-          itemBuilder: (context, index) {
-            return FavoriteCard(
-              fetchFavoriteUsers,
-              favoriteUsers,
-              favoriteUsers[index],
-              index,
-              onRemoveFavorite,
-              onFavoriteToggle: () => updateFavoriteStatus(),
-            );
-          },
-        ),
+          if (isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -87,13 +99,14 @@ class _FavouritesState extends State<Favourites> {
 class FavoriteCard extends StatefulWidget {
   final VoidCallback fetchFavouriteUsers;
   final Function(int) onRemoveFavorite;
+  bool isLoading;
   List<Map<String, dynamic>> favoriteUsers;
   final Map<String, dynamic> favourite;
   int index;
   final VoidCallback onFavoriteToggle;
 
   FavoriteCard(
-      this.fetchFavouriteUsers, this.favoriteUsers, this.favourite, this.index, this.onRemoveFavorite, {required this.onFavoriteToggle});
+      this.fetchFavouriteUsers, this.favoriteUsers, this.favourite, this.index, this.onRemoveFavorite, this.isLoading, {required this.onFavoriteToggle});
 
   @override
   State<FavoriteCard> createState() => _FavoriteCardState();
@@ -195,11 +208,17 @@ class _FavoriteCardState extends State<FavoriteCard> {
                 height: 60,
                 child: Center(
                   child: IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       setState(() {
-                        widget.onRemoveFavorite(widget.index);
-                        widget.onFavoriteToggle();
+                        widget.isLoading=true;
                       });
+                        await widget.onRemoveFavorite(widget.index);
+                      if (mounted) {
+                        setState(() {
+                          widget.onFavoriteToggle();
+                          widget.isLoading=false;
+                        });
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: const Text(
